@@ -13,30 +13,122 @@ document.addEventListener("DOMContentLoaded", () => {
 function initCountdown() {
   // Set the birthday target date here
   const targetDate = new Date("March 29, 2026 11:30:00").getTime();
-  
+
   const timer = setInterval(() => {
     const now = new Date().getTime();
     const distance = targetDate - now;
-    
+
     if (distance < 0) {
       clearInterval(timer);
       document.getElementById("days").innerText = "00";
       document.getElementById("hours").innerText = "00";
       document.getElementById("mins").innerText = "00";
       document.getElementById("secs").innerText = "00";
+      launchConfetti();
       return;
     }
-    
+
     const days = Math.floor(distance / (1000 * 60 * 60 * 24));
     const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-    
+
     document.getElementById("days").innerText = days.toString().padStart(2, '0');
     document.getElementById("hours").innerText = hours.toString().padStart(2, '0');
     document.getElementById("mins").innerText = minutes.toString().padStart(2, '0');
     document.getElementById("secs").innerText = seconds.toString().padStart(2, '0');
   }, 1000);
+}
+
+// ─── Confetti System ───────────────────────────────────────────────────────────
+
+function launchConfetti() {
+  const canvas = document.getElementById("confetti-canvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  canvas.style.display = "block";
+
+  const COLORS = [
+    "#ff6b6b", "#ffd93d", "#6bcb77", "#4d96ff",
+    "#ff922b", "#cc5de8", "#40916c", "#f8961e",
+    "#ffffff", "#74c69d", "#ffca3a"
+  ];
+
+  const PIECE_COUNT = 220;
+  const pieces = [];
+
+  for (let i = 0; i < PIECE_COUNT; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 8 + 3;
+    pieces.push({
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - (Math.random() * 6 + 4), // upward bias
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      w: Math.random() * 10 + 6,
+      h: Math.random() * 6 + 3,
+      rotation: Math.random() * Math.PI * 2,
+      rotationSpeed: (Math.random() - 0.5) * 0.3,
+      alpha: 1,
+      shape: Math.random() > 0.5 ? "rect" : "circle",
+    });
+  }
+
+  const gravity  = 0.25;
+  const friction = 0.99;
+  let   frame    = 0;
+  const maxFrames = 300; // ~5 s at 60 fps
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    pieces.forEach((p) => {
+      p.vy += gravity;
+      p.vx *= friction;
+      p.x  += p.vx;
+      p.y  += p.vy;
+      p.rotation += p.rotationSpeed;
+      if (frame > maxFrames * 0.6) {
+        p.alpha -= 0.012; // fade out in the last 40 % of the animation
+      }
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.alpha);
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation);
+      ctx.fillStyle = p.color;
+
+      if (p.shape === "circle") {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      }
+
+      ctx.restore();
+    });
+
+    frame++;
+    if (frame < maxFrames) {
+      requestAnimationFrame(draw);
+    } else {
+      // Clean up
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.style.display = "none";
+    }
+  }
+
+  requestAnimationFrame(draw);
+
+  // Also handle window resize while confetti is running
+  window.addEventListener("resize", () => {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }, { once: true });
 }
 
 function createLeaf(container) {
